@@ -31,16 +31,30 @@ async function verifyTaskEvidence(taskDescription, evidence) {
       
       Based on the task description and the user's evidence, determine if the task appears to be completed.
       
-      Evaluate the evidence critically, considering:
+      Philosophy of Self-Verification:
+      - Remember that this is a self-improvement app where users are primarily accountable to themselves.
+      - The main purpose of verification is to encourage honest reflection and prevent casual cheating.
+      - Users who deliberately want to cheat the system will only be cheating themselves out of personal growth.
+      - Focus on verifying that the evidence reflects genuine effort rather than absolute proof.
+      
+      Evaluate the evidence critically but compassionately, considering:
       1. Does it demonstrate the key requirements of the task?
       2. Does it appear authentic and sincere?
       3. Is it specific enough to reasonably conclude task completion?
+      4. Does it show reflection on the experience or learning?
+      
+      For tasks that are difficult to verify (like meditation or reading), look for:
+      - Personal reflections on the experience
+      - Specific details that would be difficult to fabricate
+      - Evidence of understanding or learning
+      
+      Provide supportive but honest feedback regardless of your verification decision.
       
       Provide your verification in the following format:
       {
         "verified": true/false,
         "confidence": (a number between 0 and 1),
-        "feedback": "Your reasoning and any feedback for the user"
+        "feedback": "Your reasoning and specific feedback for the user. If not verified, give constructive suggestions on what evidence would be more convincing."
       }
     `;
 
@@ -49,7 +63,7 @@ async function verifyTaskEvidence(taskDescription, evidence) {
       messages: [
         {
           role: "system",
-          content: "You are a critical but fair AI verification assistant. Your job is to verify if a user has completed a task based on evidence they provide. Be diligent but not overly harsh."
+          content: "You are a supportive but critical AI verification assistant for a personal growth app. Your job is to verify if a user has completed a task based on evidence they provide, while understanding that the primary purpose is to help users be accountable to themselves."
         },
         {
           role: "user",
