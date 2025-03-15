@@ -16,6 +16,17 @@ interface UserStats {
   }[];
 }
 
+interface Task {
+  id: number;
+  status: string;
+  completed_at?: string;
+}
+
+interface Goal {
+  id: number;
+  tasks: Task[];
+}
+
 const GrowthDashboard = () => {
   const { address, isConnected } = useAccount();
   const [userStats, setUserStats] = useState<UserStats>({
@@ -76,15 +87,76 @@ const GrowthDashboard = () => {
         
         const data = await response.json();
         
-        // Count completed tasks
+        // Count completed tasks and gather their completion dates
         let completedCount = 0;
-        data.goals?.forEach((goal: any) => {
-          goal.tasks?.forEach((task: any) => {
+        const completedDates: Date[] = [];
+        
+        data.goals?.forEach((goal: Goal) => {
+          goal.tasks?.forEach((task: Task) => {
             if (task.status === 'completed') {
               completedCount++;
+              // If there's a completed_at date, use it
+              if (task.completed_at) {
+                completedDates.push(new Date(task.completed_at));
+              } else {
+                // If no completed_at field, we'll use the current date
+                // This is a fallback - ideally all completed tasks should have this field
+                completedDates.push(new Date());
+              }
             }
           });
         });
+        
+        // Sort dates from newest to oldest
+        completedDates.sort((a, b) => b.getTime() - a.getTime());
+        
+        // Calculate streak based on daily task completions
+        let streak = 0;
+        
+        if (completedDates.length > 0) {
+          // Start with 1 for today if there's at least one completed task
+          streak = 1;
+          
+          // Create a date for comparison, starting with the most recent completed task
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          // Check if the most recent task was completed today
+          const mostRecentDate = new Date(completedDates[0]);
+          mostRecentDate.setHours(0, 0, 0, 0);
+          
+          // If the most recent task wasn't completed today, we don't have a current streak
+          if (mostRecentDate.getTime() !== today.getTime()) {
+            streak = 0;
+          }
+          
+          // Now check for consecutive days before today
+          if (streak > 0) {
+            // Get unique dates (we only care if at least one task was completed each day)
+            const uniqueDates = completedDates.map(date => {
+              const d = new Date(date);
+              d.setHours(0, 0, 0, 0);
+              return d.getTime();
+            }).filter((date, index, self) => self.indexOf(date) === index);
+            
+            // For each previous day, check if there was a task completed
+            let checkDate = new Date(today);
+            
+            while (true) {
+              // Move to the previous day
+              checkDate.setDate(checkDate.getDate() - 1);
+              checkDate.setHours(0, 0, 0, 0);
+              
+              // Check if there was a task completed on this day
+              if (uniqueDates.includes(checkDate.getTime())) {
+                streak++;
+              } else {
+                // Break the streak when we find a day with no completions
+                break;
+              }
+            }
+          }
+        }
         
         // Demo calculation of XP and level
         const xp = completedCount * 25; // 25 XP per completed task
@@ -108,6 +180,10 @@ const GrowthDashboard = () => {
           if (badge.id === 'level_5' && level >= 5) {
             return { ...badge, achieved: true };
           }
+          // Update the streak badge
+          if (badge.id === 'three_days' && streak >= 3) {
+            return { ...badge, achieved: true };
+          }
           return badge;
         });
         
@@ -116,7 +192,7 @@ const GrowthDashboard = () => {
           xp,
           xpToNextLevel,
           completedTasks: completedCount,
-          streak: 3, // Simulated for demo
+          streak: streak,
           badges: updatedBadges,
         });
       } catch (err) {

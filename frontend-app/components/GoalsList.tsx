@@ -40,6 +40,8 @@ const GoalsList = () => {
   const [evidenceError, setEvidenceError] = useState<string | null>(null);
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
   const [viewingEvidence, setViewingEvidence] = useState<{taskId: number, evidence: string} | null>(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [submissionSuccess, setSubmissionSuccess] = useState<{taskId: number, message: string} | null>(null);
 
   const fetchGoals = async () => {
     if (!isConnected || !address) return;
@@ -122,6 +124,7 @@ const GoalsList = () => {
     setIsSubmittingEvidence(true);
     setEvidenceError(null);
     setVerificationResult(null);
+    setSubmissionSuccess(null);
 
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/tasks/${evidenceData.taskId}`, {
@@ -161,22 +164,50 @@ const GoalsList = () => {
         }))
       );
 
-      // If AI verification was successful, store the result and show notification
+      // If AI verification was successful, store the result and show success message
       if (data.aiVerification) {
         setVerificationResult(data.aiVerification);
       }
       
-      // Close the modal after successful submission
-      setShowEvidenceModal(false);
+      // Show success message in the modal instead of closing it immediately
+      setShowSuccessMessage(true);
+      setSubmissionSuccess({
+        taskId: evidenceData.taskId,
+        message: data.aiVerification && data.aiVerification.verified 
+          ? 'Your evidence has been verified successfully!' 
+          : 'Your task has been marked as completed!'
+      });
       
-      // Show success message
-      alert('Evidence accepted! Task marked as completed.');
+      // Close modal after 3 seconds if user doesn't close it manually
+      setTimeout(() => {
+        if (showSuccessMessage) {
+          setShowEvidenceModal(false);
+          setShowSuccessMessage(false);
+        }
+      }, 3000);
+      
     } catch (err: any) {
       console.error('Error submitting evidence:', err);
       setEvidenceError(err.message || 'Failed to submit evidence');
     } finally {
       setIsSubmittingEvidence(false);
     }
+  };
+
+  const discardEvidence = () => {
+    if (isSubmittingEvidence) return;
+    
+    if (evidenceData.evidence.trim() !== '' && 
+        !confirm('Are you sure you want to discard your evidence?')) {
+      return;
+    }
+    
+    setShowEvidenceModal(false);
+    setEvidenceData({taskId: 0, evidence: ''});
+    setVerificationResult(null);
+    setEvidenceError(null);
+    setShowSuccessMessage(false);
+    setSubmissionSuccess(null);
   };
 
   const cancelGoal = async (goalId: number) => {
@@ -343,52 +374,114 @@ const GoalsList = () => {
       {showEvidenceModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Provide Task Completion Evidence</h3>
-            
-            {evidenceError && (
-              <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-4">
-                <p className="text-red-700 text-sm">{evidenceError}</p>
-              </div>
-            )}
-            
-            {verificationResult && !verificationResult.verified && (
-              <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-4">
-                <p className="font-medium text-yellow-800 text-sm">AI Verification Feedback:</p>
-                <p className="text-yellow-700 text-sm mt-1">{verificationResult.feedback}</p>
-                <p className="text-yellow-600 text-xs mt-2">Please revise your evidence based on this feedback.</p>
-              </div>
-            )}
-            
-            <p className="text-sm text-gray-600 mb-4">
-              Please provide evidence that you have completed this task. Be specific and detailed.
-              {goals.find(g => g.tasks.some(t => t.id === evidenceData.taskId))?.staked_amount && 
-                " Your evidence will be verified by AI since you have ETH staked on this goal."}
-            </p>
-            
-            <textarea
-              className="w-full border border-gray-300 rounded-md p-2 text-sm h-32 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Describe how you completed this task, attach links, or provide any other relevant evidence..."
-              value={evidenceData.evidence}
-              onChange={(e) => setEvidenceData({...evidenceData, evidence: e.target.value})}
-              disabled={isSubmittingEvidence}
-            ></textarea>
-            
-            <div className="mt-4 flex justify-end space-x-3">
-              <button
-                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                onClick={() => setShowEvidenceModal(false)}
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                {showSuccessMessage ? 'Submission Successful' : 'Provide Task Completion Evidence'}
+              </h3>
+              <button 
+                className="text-gray-400 hover:text-gray-500" 
+                onClick={discardEvidence}
                 disabled={isSubmittingEvidence}
               >
-                {verificationResult && !verificationResult.verified ? 'Discard Changes' : 'Cancel'}
-              </button>
-              <button
-                className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                onClick={submitEvidence}
-                disabled={isSubmittingEvidence}
-              >
-                {isSubmittingEvidence ? 'Submitting...' : (verificationResult ? 'Resubmit Evidence' : 'Submit Evidence')}
+                ✕
               </button>
             </div>
+            
+            {showSuccessMessage && submissionSuccess ? (
+              <div className="text-center py-6">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p className="text-green-600 font-medium mb-2">{submissionSuccess.message}</p>
+                <p className="text-sm text-gray-500">You can always view or edit your evidence later.</p>
+                <div className="mt-6">
+                  <button
+                    className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                    onClick={() => {
+                      setShowEvidenceModal(false);
+                      setShowSuccessMessage(false);
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {evidenceError && (
+                  <div className="bg-red-50 border-l-4 border-red-500 p-3 mb-4">
+                    <p className="text-red-700 text-sm">{evidenceError}</p>
+                  </div>
+                )}
+                
+                {verificationResult && !verificationResult.verified && (
+                  <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-4">
+                    <p className="font-medium text-yellow-800 text-sm">AI Verification Feedback:</p>
+                    <p className="text-yellow-700 text-sm mt-1">{verificationResult.feedback}</p>
+                    <p className="text-yellow-600 text-xs mt-2">Please revise your evidence based on this feedback.</p>
+                  </div>
+                )}
+                
+                {verificationResult && verificationResult.verified && (
+                  <div className="bg-green-50 border-l-4 border-green-500 p-3 mb-4">
+                    <p className="font-medium text-green-800 text-sm">AI Verification Successful:</p>
+                    <p className="text-green-700 text-sm mt-1">{verificationResult.feedback}</p>
+                  </div>
+                )}
+                
+                <p className="text-sm text-gray-600 mb-4">
+                  Please provide evidence that you have completed this task. Be specific and detailed.
+                  {goals.find(g => g.tasks.some(t => t.id === evidenceData.taskId))?.staked_amount && 
+                    " Your evidence will be verified by AI since you have ETH staked on this goal."}
+                </p>
+                
+                <textarea
+                  className="w-full border border-gray-300 rounded-md p-2 text-sm h-32 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Describe how you completed this task, attach links, or provide any other relevant evidence..."
+                  value={evidenceData.evidence}
+                  onChange={(e) => setEvidenceData({...evidenceData, evidence: e.target.value})}
+                  disabled={isSubmittingEvidence}
+                ></textarea>
+                
+                <div className="mt-4 flex justify-between">
+                  <div className="text-xs text-gray-500">
+                    {evidenceData.evidence.length} / 1000 characters
+                  </div>
+                  <div className="space-x-3">
+                    <button
+                      className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                      onClick={discardEvidence}
+                      disabled={isSubmittingEvidence}
+                    >
+                      {verificationResult && !verificationResult.verified ? 'Discard Changes' : 'Cancel'}
+                    </button>
+                    <button
+                      className="px-4 py-2 text-sm text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      onClick={submitEvidence}
+                      disabled={isSubmittingEvidence || !evidenceData.evidence.trim()}
+                    >
+                      {isSubmittingEvidence ? (
+                        <span className="flex items-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Submitting...
+                        </span>
+                      ) : (verificationResult ? 'Resubmit Evidence' : 'Submit Evidence')}
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <p className="text-xs text-gray-500">
+                    <span className="font-medium">Remember:</span> Your evidence should clearly demonstrate that you've completed the task. The more detailed, the better.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -397,13 +490,36 @@ const GoalsList = () => {
       {viewingEvidence && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Task Completion Evidence</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Task Completion Evidence</h3>
+              <button 
+                className="text-gray-400 hover:text-gray-500" 
+                onClick={() => setViewingEvidence(null)}
+              >
+                ✕
+              </button>
+            </div>
             
             <div className="bg-gray-50 p-3 rounded-md mb-4 max-h-60 overflow-y-auto">
               <p className="text-gray-700 text-sm whitespace-pre-wrap">{viewingEvidence.evidence}</p>
             </div>
             
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 flex justify-between">
+              <button
+                className="px-4 py-2 text-sm text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50"
+                onClick={() => {
+                  // Set up to edit this evidence
+                  setEvidenceData({
+                    taskId: viewingEvidence.taskId,
+                    evidence: viewingEvidence.evidence
+                  });
+                  setViewingEvidence(null);
+                  setShowEvidenceModal(true);
+                }}
+              >
+                Edit Evidence
+              </button>
+              
               <button
                 className="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                 onClick={() => setViewingEvidence(null)}
