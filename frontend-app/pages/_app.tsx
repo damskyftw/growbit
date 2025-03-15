@@ -3,6 +3,7 @@ import type { AppProps } from 'next/app';
 import { useState, useEffect } from 'react';
 import { WagmiConfig, createClient, configureChains } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
+import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
 import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
 import { CoinbaseWalletConnector } from 'wagmi/connectors/coinbaseWallet';
 import { InjectedConnector } from 'wagmi/connectors/injected';
@@ -31,7 +32,17 @@ const baseSepolia: Chain = {
 // Configure chains & providers
 const { chains, provider, webSocketProvider } = configureChains(
   [baseSepolia],
-  [publicProvider()]
+  [
+    jsonRpcProvider({
+      rpc: (chain) => {
+        if (chain.id === baseSepolia.id) {
+          return { http: 'https://sepolia.base.org' };
+        }
+        return null;
+      },
+    }),
+    publicProvider(),
+  ]
 );
 
 // Create wagmi client

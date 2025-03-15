@@ -13,6 +13,7 @@ import BadgeCollection from '../components/BadgeCollection';
 import GoalsHistory from '../components/GoalsHistory';
 import WalletStatus from '../components/WalletStatus';
 import ConnectWallet from '../components/ConnectWallet';
+import NetworkStatus from '../components/NetworkStatus';
 import { useAccount } from 'wagmi';
 
 export default function Home() {
@@ -97,6 +98,7 @@ export default function Home() {
           <>
             <div className="mb-6">
               <SmartWalletInfo />
+              <NetworkStatus />
             </div>
 
             {/* Desktop View - Two-column layout with 70/30 split */}
@@ -209,6 +211,7 @@ export default function Home() {
                   <GoalSettingForm />
                 </div>
                 <div className="space-y-6">
+                  <NetworkStatus />
                   <TokenBalance />
                   <ClaimReward />
                   <WalletStatus />
