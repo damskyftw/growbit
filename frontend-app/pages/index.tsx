@@ -75,189 +75,205 @@ export default function Home() {
           </div>
         ) : null}
 
-        {/* Wallet connection components */}
-        <WalletStatus />
-        <ConnectWallet />
-        
-        {isConnected && (
-          <div className="mb-6">
-            <SmartWalletInfo />
+        {/* Welcome section for non-logged-in users */}
+        {!isConnected && (
+          <div className="bg-white rounded-lg shadow-md p-8 mb-6 text-center">
+            <h1 className="text-3xl font-bold text-growbit-green mb-4">Welcome to GrowBit</h1>
+            <p className="text-xl text-gray-700 mb-6">
+              Transform your goals into reality with blockchain-powered accountability. 
+              Set goals, stake ETH, and earn rewards as you complete tasks on your growth journey.
+            </p>
+            <div className="flex justify-center">
+              <ConnectWallet />
+            </div>
           </div>
         )}
 
-        {/* Desktop View - Two-column layout with 70/30 split */}
-        <div className="hidden md:block">
-          <div className="grid md:grid-cols-7 gap-6">
-            {/* Main Content (70%) */}
-            <div className="md:col-span-5">
-              <div className="space-y-6">
-                <div className="grid grid-cols-6 gap-6">
-                  {/* Left column for balances and rewards */}
-                  <div className="col-span-2">
-                    <div className="space-y-6">
-                      <TokenBalance />
-                      <ClaimReward />
-                    </div>
-                  </div>
-                  
-                  {/* Middle/right for dashboard and goal setting */}
-                  <div className="col-span-4">
-                    <div className="space-y-6">
-                      <GrowthDashboard />
-                      <GoalSettingForm />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Goals list spans full width of main content */}
-                <GoalsList />
-                <GoalsHistory />
-              </div>
+        {/* Wallet status always visible */}
+        <WalletStatus />
+        
+        {/* Only show the rest of the UI when logged in */}
+        {isConnected && (
+          <>
+            <div className="mb-6">
+              <SmartWalletInfo />
             </div>
-            
-            {/* Community Section (30%) */}
-            <div className="md:col-span-2">
-              <div className="sticky top-6">
-                <div className="bg-white rounded-lg shadow-md p-4">
-                  <h2 className="text-xl font-semibold mb-4">Community</h2>
-                  
-                  {/* Improved tab buttons with more space */}
-                  <div className="flex border-b mb-4">
-                    <button
-                      onClick={() => setActiveTab('dashboard')}
-                      className={`flex-1 px-2 py-2 text-sm font-medium ${
-                        activeTab === 'dashboard' 
-                          ? 'text-blue-600 border-b-2 border-blue-600' 
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      Badges
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('leaderboard')}
-                      className={`flex-1 px-2 py-2 text-sm font-medium ${
-                        activeTab === 'leaderboard' 
-                          ? 'text-blue-600 border-b-2 border-blue-600' 
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      Leaderboard
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('challenges')}
-                      className={`flex-1 px-2 py-2 text-sm font-medium ${
-                        activeTab === 'challenges' 
-                          ? 'text-blue-600 border-b-2 border-blue-600' 
-                          : 'text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
-                      Challenges
-                    </button>
-                  </div>
-                  
-                  {/* Content area with controlled height and scrolling */}
-                  <div className="overflow-hidden">
-                    {activeTab === 'dashboard' && (
-                      <div className="max-h-[600px] overflow-y-auto pr-1">
-                        <BadgeCollection />
-                      </div>
-                    )}
-                    {activeTab === 'leaderboard' && (
-                      <div className="max-h-[600px] overflow-y-auto pr-1">
-                        <Leaderboard />
-                      </div>
-                    )}
-                    {activeTab === 'challenges' && (
-                      <div className="max-h-[600px] overflow-y-auto pr-1">
-                        <FriendChallenges />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Mobile View - Improved tabbed layout */}
-        <div className="md:hidden">
-          <NavTabs labels={['Dashboard', 'Goals', 'New Goal', 'Wallet', 'Community']}>
-            <div>
-              <GrowthDashboard />
-            </div>
-            <div>
-              <GoalsList />
-              <div className="mt-6">
-                <GoalsHistory />
-              </div>
-            </div>
-            <div>
-              <GoalSettingForm />
-            </div>
-            <div className="space-y-6">
-              <TokenBalance />
-              <ClaimReward />
-              <WalletStatus />
-              <ConnectWallet />
-            </div>
-            {/* Community tab with inner tab navigation */}
-            <div>
-              <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-                <h2 className="text-xl font-semibold mb-4">Community</h2>
-                <div className="flex justify-between border-b mb-4">
-                  <button
-                    onClick={() => setActiveTab('dashboard')}
-                    className={`flex-1 px-3 py-2 text-sm font-medium ${
-                      activeTab === 'dashboard' 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Badges
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('leaderboard')}
-                    className={`flex-1 px-3 py-2 text-sm font-medium ${
-                      activeTab === 'leaderboard' 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Leaderboard
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('challenges')}
-                    className={`flex-1 px-3 py-2 text-sm font-medium ${
-                      activeTab === 'challenges' 
-                        ? 'text-blue-600 border-b-2 border-blue-600' 
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Challenges
-                  </button>
+            {/* Desktop View - Two-column layout with 70/30 split */}
+            <div className="hidden md:block">
+              <div className="grid md:grid-cols-7 gap-6">
+                {/* Main Content (70%) */}
+                <div className="md:col-span-5">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-6 gap-6">
+                      {/* Left column for balances and rewards */}
+                      <div className="col-span-2">
+                        <div className="space-y-6">
+                          <TokenBalance />
+                          <ClaimReward />
+                        </div>
+                      </div>
+                      
+                      {/* Middle/right for dashboard and goal setting */}
+                      <div className="col-span-4">
+                        <div className="space-y-6">
+                          <GrowthDashboard />
+                          <GoalSettingForm />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Goals list spans full width of main content */}
+                    <GoalsList />
+                    <GoalsHistory />
+                  </div>
                 </div>
                 
-                <div className="overflow-hidden">
-                  {activeTab === 'dashboard' && (
-                    <div className="max-h-[450px] overflow-y-auto pr-1">
-                      <BadgeCollection />
+                {/* Community Section (30%) */}
+                <div className="md:col-span-2">
+                  <div className="sticky top-6">
+                    <div className="bg-white rounded-lg shadow-md p-4">
+                      <h2 className="text-xl font-semibold mb-4">Community</h2>
+                      
+                      {/* Improved tab buttons with more space */}
+                      <div className="flex border-b mb-4">
+                        <button
+                          onClick={() => setActiveTab('dashboard')}
+                          className={`flex-1 px-2 py-2 text-sm font-medium ${
+                            activeTab === 'dashboard' 
+                              ? 'text-blue-600 border-b-2 border-blue-600' 
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          Badges
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('leaderboard')}
+                          className={`flex-1 px-2 py-2 text-sm font-medium ${
+                            activeTab === 'leaderboard' 
+                              ? 'text-blue-600 border-b-2 border-blue-600' 
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          Leaderboard
+                        </button>
+                        <button
+                          onClick={() => setActiveTab('challenges')}
+                          className={`flex-1 px-2 py-2 text-sm font-medium ${
+                            activeTab === 'challenges' 
+                              ? 'text-blue-600 border-b-2 border-blue-600' 
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          Challenges
+                        </button>
+                      </div>
+                      
+                      {/* Content area with controlled height and scrolling */}
+                      <div className="overflow-hidden">
+                        {activeTab === 'dashboard' && (
+                          <div className="max-h-[600px] overflow-y-auto pr-1">
+                            <BadgeCollection />
+                          </div>
+                        )}
+                        {activeTab === 'leaderboard' && (
+                          <div className="max-h-[600px] overflow-y-auto pr-1">
+                            <Leaderboard />
+                          </div>
+                        )}
+                        {activeTab === 'challenges' && (
+                          <div className="max-h-[600px] overflow-y-auto pr-1">
+                            <FriendChallenges />
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  {activeTab === 'leaderboard' && (
-                    <div className="max-h-[450px] overflow-y-auto pr-1">
-                      <Leaderboard />
-                    </div>
-                  )}
-                  {activeTab === 'challenges' && (
-                    <div className="max-h-[450px] overflow-y-auto pr-1">
-                      <FriendChallenges />
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
-          </NavTabs>
-        </div>
+
+            {/* Mobile View - Improved tabbed layout */}
+            <div className="md:hidden">
+              <NavTabs labels={['Dashboard', 'Goals', 'New Goal', 'Wallet', 'Community']}>
+                <div>
+                  <GrowthDashboard />
+                </div>
+                <div>
+                  <GoalsList />
+                  <div className="mt-6">
+                    <GoalsHistory />
+                  </div>
+                </div>
+                <div>
+                  <GoalSettingForm />
+                </div>
+                <div className="space-y-6">
+                  <TokenBalance />
+                  <ClaimReward />
+                  <WalletStatus />
+                  <ConnectWallet />
+                </div>
+                {/* Community tab with inner tab navigation */}
+                <div>
+                  <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+                    <h2 className="text-xl font-semibold mb-4">Community</h2>
+                    <div className="flex justify-between border-b mb-4">
+                      <button
+                        onClick={() => setActiveTab('dashboard')}
+                        className={`flex-1 px-3 py-2 text-sm font-medium ${
+                          activeTab === 'dashboard' 
+                            ? 'text-blue-600 border-b-2 border-blue-600' 
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        Badges
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('leaderboard')}
+                        className={`flex-1 px-3 py-2 text-sm font-medium ${
+                          activeTab === 'leaderboard' 
+                            ? 'text-blue-600 border-b-2 border-blue-600' 
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        Leaderboard
+                      </button>
+                      <button
+                        onClick={() => setActiveTab('challenges')}
+                        className={`flex-1 px-3 py-2 text-sm font-medium ${
+                          activeTab === 'challenges' 
+                            ? 'text-blue-600 border-b-2 border-blue-600' 
+                            : 'text-gray-500 hover:text-gray-700'
+                        }`}
+                      >
+                        Challenges
+                      </button>
+                    </div>
+                    
+                    <div className="overflow-hidden">
+                      {activeTab === 'dashboard' && (
+                        <div className="max-h-[450px] overflow-y-auto pr-1">
+                          <BadgeCollection />
+                        </div>
+                      )}
+                      {activeTab === 'leaderboard' && (
+                        <div className="max-h-[450px] overflow-y-auto pr-1">
+                          <Leaderboard />
+                        </div>
+                      )}
+                      {activeTab === 'challenges' && (
+                        <div className="max-h-[450px] overflow-y-auto pr-1">
+                          <FriendChallenges />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </NavTabs>
+            </div>
+          </>
+        )}
       </main>
 
       <footer className="bg-white border-t border-gray-200 mt-8">
