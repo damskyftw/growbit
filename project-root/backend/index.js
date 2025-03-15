@@ -13,7 +13,7 @@ const blockchainService = require('./blockchain');
 const { verifyTaskEvidence } = require('./ai-verification');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors());
@@ -570,10 +570,14 @@ app.put('/api/tasks/:taskId', async (req, res) => {
           }
         }
         
-        // Update the task status
+        // Set completed_at timestamp if the status is changing to completed
+        const now = new Date().toISOString();
+        const completed_at = status === 'completed' ? now : null;
+        
+        // Update the task status and add completed_at timestamp
         db.run(
-          'UPDATE tasks SET status = ?, evidence = ?, updated_at = ? WHERE id = ?',
-          [status, evidence || null, new Date().toISOString(), taskId],
+          'UPDATE tasks SET status = ?, evidence = ?, updated_at = ?, completed_at = ? WHERE id = ?',
+          [status, evidence || null, now, completed_at, taskId],
           function(err) {
             if (err) {
               console.error('Error updating task:', err);
