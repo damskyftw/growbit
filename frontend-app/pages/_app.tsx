@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { WagmiConfig, createClient, configureChains } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
 import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
-import { WalletConnectConnector } from 'wagmi/connectors/walletConnect';
 import { CoinbaseWalletConnector } from 'wagmi/connectors/coinbaseWallet';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { Chain } from 'wagmi';
@@ -35,7 +34,7 @@ const { chains, provider, webSocketProvider } = configureChains(
   [publicProvider()]
 );
 
-// Set up wagmi config
+// Create wagmi client
 const client = createClient({
   autoConnect: true,
   connectors: [
@@ -45,12 +44,6 @@ const client = createClient({
       options: {
         appName: 'GrowBit',
         // Smart wallet features are auto-enabled when using Coinbase Wallet on Base
-      },
-    }),
-    new WalletConnectConnector({
-      chains,
-      options: {
-        projectId: '3f767837ee334febbfd764b0b6b796e8',
       },
     }),
     // Additional connector for any injected wallet like Rabby
