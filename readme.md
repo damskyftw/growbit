@@ -1,6 +1,6 @@
 # GrowBit: Agent-Powered Goal Achievement System
 
-**DISCLAIMER:** This project was created for the ETHSF hackathon but wasn't completed within the official time constraints. It represents a work-in-progress with core functionalities implemented but some features still under development. The codebase is being shared for educational purposes and as a demonstration of the concept.
+**DISCLAIMER:** **This project was created for the ETHSF hackathon but wasn't completed within the official time constraints. It represents a work-in-progress with core functionalities implemented but some features still under development. The codebase is being shared for educational purposes and as a demonstration of the concept.**
 
 Welcome to GrowBit, a groundbreaking application built for the ETHSF hackathon that redefines personal growth through autonomous onchain intelligence. Using AgentKit by Coinbase, GrowBit empowers users to set personal growth goals in natural language, while an AI agent autonomously generates customized task sequences, verifies completion, distributes crypto micro-rewards, and adapts the plan based on user performance—all seamlessly integrated with blockchain technology. This project showcases the potential of AgentKit to abstract crypto complexities, facilitate agentic commerce, and push the limits of what autonomous agents can achieve.
 
@@ -18,7 +18,7 @@ GrowBit is more than just a goal-tracking tool—it's an experiment in autonomou
 
 ## Why This is Innovative
 
-GrowBit leverages AgentKit in a way that pushes the boundaries of autonomous agents and aligns with ETHSF's prize criteria:
+GrowBit leverages AgentKit in a way that pushes the boundaries of autonomous agents and aligns with ETHSF's criteria:
 
 - **Agentic Commerce Revolution**: The agent autonomously manages crypto reward distribution, creating a frictionless payment rail that motivates users without requiring them to understand blockchain mechanics.
 - ** UX**: AgentKit abstracts all crypto complexities behind a natural language interface, making rewards feel intuitive and accessible to anyone, regardless of crypto expertise.
