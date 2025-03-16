@@ -21,7 +21,7 @@ GrowBit is more than just a goal-tracking tool—it's an experiment in autonomou
 GrowBit leverages AgentKit in a way that pushes the boundaries of autonomous agents and aligns with ETHSF's prize criteria:
 
 - **Agentic Commerce Revolution**: The agent autonomously manages crypto reward distribution, creating a frictionless payment rail that motivates users without requiring them to understand blockchain mechanics.
-- **Best Crypto UX**: AgentKit abstracts all crypto complexities behind a natural language interface, making rewards feel intuitive and accessible to anyone, regardless of crypto expertise.
+- ** UX**: AgentKit abstracts all crypto complexities behind a natural language interface, making rewards feel intuitive and accessible to anyone, regardless of crypto expertise.
 - **Crazy Experiment**: An autonomous agent that acts as a personal growth coach, verifies real-world task completion, and self-funds rewards via blockchain rails demonstrates a bold new paradigm for AI-driven motivation.
 
 This isn't just useful—it's a wild, creative leap into what agents can do when given financial autonomy and a mission to inspire human growth.
