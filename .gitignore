@@ -1,4 +1,4 @@
-# Dependency directories
+# Node.js dependencies
 node_modules/
 */node_modules/
 /.pnp
@@ -55,4 +55,7 @@ logs
 *.swp
 *.swo
 *.swn
+.DS_Store
+
+# macOS
 .DS_Store 

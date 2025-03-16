@@ -1,99 +1,29 @@
-# GrowBit
+GrowBit: Agent-Powered Goal Achievement System
+Welcome to GrowBit, a groundbreaking application built for the ETHSF hackathon that redefines personal growth through autonomous onchain intelligence. Using AgentKit by Coinbase, GrowBit empowers users to set personal growth goals in natural language, while an AI agent autonomously generates customized task sequences, verifies completion, distributes crypto micro-rewards, and adapts the plan based on user performance—all seamlessly integrated with blockchain technology. This project showcases the potential of AgentKit to abstract crypto complexities, facilitate agentic commerce, and push the limits of what autonomous agents can achieve.
 
-GrowBit is an agent-powered goal achievement system that turns personal growth into rewarding blockchain experiences. Built for the ETHSF hackathon 2025.
+Project Vision
 
-## About
+GrowBit is more than just a goal-tracking tool—it’s an experiment in autonomous motivation. By combining advanced AI with AgentKit’s blockchain capabilities, we’ve created an agent that acts as a personal coach, financial incentivizer, and adaptive strategist. Whether you’re learning a new skill, improving your health, or tackling a passion project, GrowBit makes the journey engaging, rewarding, and effortless, with crypto micro-rewards delivered directly to your wallet.
 
-GrowBit combines AI and blockchain technology to create a powerful motivation system where:
-- Users set meaningful personal growth goals in natural language
-- AI autonomously generates customized task sequences
-- Users can stake ETH on their goals for stronger commitment
-- Blockchain integration provides transparent accountability and financial motivation
-- Task completion is verified and rewarded with crypto incentives
+Features
 
-## Key Features
+Natural Language Goal Setting: Describe your personal growth goals in your own words—no rigid forms required.
 
-- Natural language goal setting
-- AI-powered task generation
-- Optional ETH staking on goals
-- Task verification system
-- Crypto micro-rewards for achievements
-- Growth Dashboard with streaks, stats and badges
-- Cancel option for non-staked goals
+Autonomous Task Generation: An AI agent crafts a tailored sequence of tasks to guide you toward your goal.
 
-## Technology Stack
+Task Verification: Submit evidence of completion, and the agent verifies it using AI-driven analysis.
 
-- **Frontend**: React, Next.js, Tailwind CSS, Wagmi hooks
-- **Backend**: Express.js, Node.js, OpenAI, SQLite
-- **Blockchain**: Solidity, Hardhat, Ethers.js, Base Sepolia testnet
-- **Integration**: Coinbase Wallet SDK for gas-free transactions
+Crypto Micro-Rewards: Earn small crypto rewards for every verified task, powered by AgentKit’s seamless blockchain integration.
 
-## Installation
+Adaptive Intelligence: The agent learns from your performance, adjusting tasks to keep you challenged yet motivated.
 
-### Prerequisites
-- Node.js v16 or higher
-- npm or yarn
-- Access to Base Sepolia testnet
+Why This is Innovative
+GrowBit leverages AgentKit in a way that pushes the boundaries of autonomous agents and aligns with ETHSF’s prize criteria:
+Agentic Commerce Revolution: The agent autonomously manages crypto reward distribution, creating a frictionless payment rail that motivates users without requiring them to understand blockchain mechanics.
 
-### Setup
+Best Crypto UX: AgentKit abstracts all crypto complexities behind a natural language interface, making rewards feel intuitive and accessible to anyone, regardless of crypto expertise.
 
-1. Clone the repository:
-```
-git clone https://github.com/damskyftw/growbit.git
-cd growbit
-```
+Crazy Experiment: An autonomous agent that acts as a personal growth coach, verifies real-world task completion, and self-funds rewards via blockchain rails demonstrates a bold new paradigm for AI-driven motivation.
 
-2. Install backend dependencies:
-```
-cd project-root/backend
-npm install
-```
-
-3. Install frontend dependencies:
-```
-cd ../../frontend-app
-npm install
-```
-
-4. Set up environment variables:
-   - Copy the example.env file to create your own .env files:
-     ```
-     # For backend
-     cp example.env project-root/backend/.env
-     
-     # For frontend
-     cp example.env frontend-app/.env.local
-     ```
-   
-   - Edit the .env files with your actual values:
-     - You'll need an OpenAI API key for AI features
-     - You'll need a wallet private key for blockchain interactions (use a testnet wallet!)
-     - Contract addresses will be provided after deployment or you can deploy your own
-
-### Security Considerations
-
-- **NEVER COMMIT** your .env files to the repository
-- Use a dedicated testnet wallet with minimal funds for development
-- Keep your API keys and private keys secure
-- The .gitignore file is set up to prevent accidental commits of sensitive files
-
-### Running the Application
-
-1. Start the backend:
-```
-cd project-root/backend
-npm start
-```
-
-2. In a new terminal, start the frontend:
-```
-cd frontend-app
-npm run dev
-```
-
-3. Access the application at `http://localhost:3000`
-
-## License
-
-MIT
+This isn’t just useful—it’s a wild, creative leap into what agents can do when given financial autonomy and a mission to inspire human growth.
 

@@ -16,16 +16,42 @@ const Leaderboard = () => {
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [timeFrame, setTimeFrame] = useState<'weekly' | 'monthly' | 'allTime'>('weekly');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [userRank, setUserRank] = useState<LeaderboardUser | null>(null);
+  
+  // Reset leaderboard data when wallet changes
+  useEffect(() => {
+    if (isConnected && address) {
+      // Reset data when the wallet address changes
+      setLeaderboardData([]);
+      setUserRank(null);
+      setLoading(true);
+      setError(null);
+    }
+  }, [address, isConnected]);
   
   // Simulate fetching leaderboard data
   useEffect(() => {
     const fetchLeaderboard = async () => {
+      if (!isConnected || !address) return;
+      
       setLoading(true);
+      setError(null);
       
       try {
+        // Check if backend is available
+        const healthCheck = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health`, { 
+          signal: AbortSignal.timeout(3000) // 3 second timeout
+        }).catch(() => null);
+        
+        if (!healthCheck || !healthCheck.ok) {
+          setError('Backend service is unavailable. Leaderboard data cannot be loaded.');
+          setLoading(false);
+          return;
+        }
+        
         // In a production app, this would be fetched from the backend
-        // For now, we'll use mock data
+        // For now, we'll use mock data with empty/default values for new users
         
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -114,18 +140,19 @@ const Leaderboard = () => {
           },
         ];
         
-        // Add the current user to a random position if connected
+        // Add the current user to a proper position using consistent logic
+        // For a new address, start them at position 40
         if (isConnected && address) {
-          const userPosition = Math.floor(Math.random() * 20) + 8; // Position 8-28
-          const userScore = 600 - (userPosition * 10); // Score decreases with position
+          const userPosition = 40; // New users will start at position 40
+          const userScore = 50; // New users will start with 50 points
           
           const userData: LeaderboardUser = {
-            address: address || '',
+            address: address,
             displayName: 'You',
             avatar: '😎',
             score: userScore,
-            streak: 3,
-            level: 2,
+            streak: 0,
+            level: 1,
             position: userPosition,
           };
           
@@ -141,12 +168,15 @@ const Leaderboard = () => {
         setLeaderboardData(dataWithPositions);
       } catch (error) {
         console.error('Error fetching leaderboard:', error);
+        setError('Failed to load leaderboard data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
     
-    fetchLeaderboard();
+    if (isConnected && address) {
+      fetchLeaderboard();
+    }
   }, [address, isConnected, timeFrame]);
   
   if (!isConnected) {
@@ -186,9 +216,15 @@ const Leaderboard = () => {
         </div>
       </div>
       
+      {/* Error State */}
+      {error && (
+        <div className="py-6 text-center text-red-500 mb-4">{error}</div>
+      )}
+      
+      {/* Loading State */}
       {loading ? (
-        <div className="py-10 text-center">
-          <p className="text-gray-500">Loading leaderboard data...</p>
+        <div className="py-10 flex justify-center">
+          <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
         </div>
       ) : (
         <>

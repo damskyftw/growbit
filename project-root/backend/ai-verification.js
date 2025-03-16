@@ -9,81 +9,171 @@
 const { OpenAI } = require('openai');
 require('dotenv').config();
 
-// Initialize OpenAI
+// Initialize OpenAI with API key from environment
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
- * Verifies task completion evidence using AI
+ * Verify task evidence using AI
+ * 
  * @param {string} taskDescription - The description of the task to verify
- * @param {string} evidence - The user-submitted evidence for task completion
- * @returns {Promise<Object>} - The verification result
+ * @param {string} evidence - The evidence provided by the user (text or image URL/base64)
+ * @returns {Object} Verification result
  */
 async function verifyTaskEvidence(taskDescription, evidence) {
   try {
-    const prompt = `
-      You are an AI assistant tasked with verifying if a user has completed a personal growth task.
+    // Determine if the evidence is an image (base64 or URL)
+    const isImage = evidence.startsWith('data:image') || 
+                    evidence.startsWith('http') && 
+                    (evidence.endsWith('.png') || 
+                     evidence.endsWith('.jpg') || 
+                     evidence.endsWith('.jpeg') ||
+                     evidence.includes('imgur') || 
+                     evidence.includes('ibb.co'));
+    
+    let messages = [];
+    
+    // For Twitter-related tasks, use a more specific system prompt for image analysis
+    if (taskDescription.toLowerCase().includes('tweet') || 
+        taskDescription.toLowerCase().includes('twitter')) {
       
-      Task Description: "${taskDescription}"
-      
-      User's Completion Evidence: "${evidence}"
-      
-      Based on the task description and the user's evidence, determine if the task appears to be completed.
-      
-      Philosophy of Self-Verification:
-      - Remember that this is a self-improvement app where users are primarily accountable to themselves.
-      - The main purpose of verification is to encourage honest reflection and prevent casual cheating.
-      - Users who deliberately want to cheat the system will only be cheating themselves out of personal growth.
-      - Focus on verifying that the evidence reflects genuine effort rather than absolute proof.
-      
-      Evaluate the evidence critically but compassionately, considering:
-      1. Does it demonstrate the key requirements of the task?
-      2. Does it appear authentic and sincere?
-      3. Is it specific enough to reasonably conclude task completion?
-      4. Does it show reflection on the experience or learning?
-      
-      For tasks that are difficult to verify (like meditation or reading), look for:
-      - Personal reflections on the experience
-      - Specific details that would be difficult to fabricate
-      - Evidence of understanding or learning
-      
-      Provide supportive but honest feedback regardless of your verification decision.
-      
-      Provide your verification in the following format:
-      {
-        "verified": true/false,
-        "confidence": (a number between 0 and 1),
-        "feedback": "Your reasoning and specific feedback for the user. If not verified, give constructive suggestions on what evidence would be more convincing."
+      if (isImage) {
+        messages = [
+          {
+            role: "system",
+            content: `You are an AI trained to verify the authenticity of Twitter posts based on screenshots. 
+                     Your task is to determine if a given screenshot shows an authentic tweet as evidence for completing the task: "${taskDescription}".
+                     
+                     Analyze the screenshot for:
+                     1. Twitter UI elements (header, profile picture, tweet formatting)
+                     2. Username and handle
+                     3. Tweet content related to web3 or blockchain
+                     4. Timestamp
+                     5. Engagement metrics (likes, retweets)
+                     
+                     Respond with:
+                     - Whether this is a valid Twitter screenshot (yes/no)
+                     - The Twitter username shown
+                     - A summary of the tweet content
+                     - Whether it meets the requirements of the task
+                     - Confidence level (1-10) and justification
+                     
+                     Your verification should be strict but fair. The screenshot must show a real tweet about web3 experiences, not a mockup or edited image.`
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Here is the screenshot evidence for the tweet. Please verify it:" },
+              { type: "image_url", image_url: { url: evidence } }
+            ]
+          }
+        ];
+      } else {
+        // Handle text evidence for Twitter tasks
+        messages = [
+          {
+            role: "system",
+            content: `You are an AI trained to verify the completion of Twitter-related tasks.
+                     Your task is to determine if the provided evidence indicates completion of the task: "${taskDescription}".
+                     
+                     Look for:
+                     1. Twitter URL or tweet ID
+                     2. Description of tweet content
+                     3. Details about what was shared
+                     
+                     Respond with whether this evidence is sufficient, and why it does or doesn't meet the requirements.`
+          },
+          {
+            role: "user",
+            content: `Here is my evidence for completing the Twitter task: ${evidence}`
+          }
+        ];
       }
-    `;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [
+    } else if (isImage) {
+      // General image evidence verification
+      messages = [
         {
           role: "system",
-          content: "You are a supportive but critical AI verification assistant for a personal growth app. Your job is to verify if a user has completed a task based on evidence they provide, while understanding that the primary purpose is to help users be accountable to themselves."
+          content: `You are an AI trained to verify task completion evidence. You need to determine if the provided image evidence demonstrates completion of this task: "${taskDescription}".
+                   
+                   Analyze the image carefully and decide if it shows clear evidence of task completion. 
+                   Consider what would constitute valid evidence for this specific task.
+                   
+                   Respond with:
+                   1. Your verification decision (verified/not verified)
+                   2. Detailed explanation of what you see in the image
+                   3. How it relates to the task requirements
+                   4. Any concerns about the validity of the evidence`
         },
         {
           role: "user",
-          content: prompt
+          content: [
+            { type: "text", text: "Here is my evidence for completing the task:" },
+            { type: "image_url", image_url: { url: evidence } }
+          ]
         }
-      ],
-      temperature: 0.7,
-      response_format: { type: "json_object" }
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-
-    // Add timestamp for audit trail
-    result.verifiedAt = new Date().toISOString();
+      ];
+    } else {
+      // General text evidence verification
+      messages = [
+        {
+          role: "system",
+          content: `You are an AI trained to verify if evidence supports task completion. 
+                   For this task: "${taskDescription}", determine if the provided evidence is sufficient proof.
+                   
+                   Consider:
+                   - Does the evidence directly address the task requirements?
+                   - Is it specific and detailed enough?
+                   - Are there any inconsistencies or vague statements?
+                   
+                   Provide a verification decision (verified/not verified) with justification.`
+        },
+        {
+          role: "user",
+          content: `Here is my evidence for completing the task: ${evidence}`
+        }
+      ];
+    }
     
-    return result;
+    // Call OpenAI API for verification
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview",
+      messages: messages,
+      max_tokens: 1000,
+      temperature: 0.2
+    });
+    
+    const aiResponse = completion.choices[0].message.content;
+    
+    // Parse the response to determine verification result
+    const lowerResponse = aiResponse.toLowerCase();
+    const isVerified = (
+      lowerResponse.includes('verified') || 
+      lowerResponse.includes('valid evidence') || 
+      lowerResponse.includes('sufficient evidence') ||
+      (lowerResponse.includes('yes') && (
+        lowerResponse.includes('valid twitter') || 
+        lowerResponse.includes('authentic tweet')
+      ))
+    );
+    
+    // For debugging during development
+    console.log('AI Verification for task:', taskDescription);
+    console.log('Verification result:', isVerified);
+    
+    return {
+      verified: isVerified,
+      feedback: aiResponse,
+      taskDescription,
+      evidenceType: isImage ? 'image' : 'text'
+    };
   } catch (error) {
-    console.error('Error verifying task evidence:', error);
-    throw new Error('Failed to verify task evidence');
+    console.error('Error in AI verification:', error);
+    throw error;
   }
 }
 
-module.exports = { verifyTaskEvidence }; 
+module.exports = {
+  verifyTaskEvidence
+}; 

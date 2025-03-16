@@ -17,7 +17,7 @@ const TokenBalance = () => {
     try {
       // First check if the backend is available
       const healthCheck = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health`, { 
-        signal: AbortSignal.timeout(3000) // 3 second timeout
+        signal: AbortSignal.timeout(5000) // 5 second timeout
       }).catch(() => null);
       
       if (!healthCheck || !healthCheck.ok) {
@@ -29,7 +29,7 @@ const TokenBalance = () => {
       
       // Now fetch the balance
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/balance/${address}`, {
-        signal: AbortSignal.timeout(5000) // 5 second timeout
+        signal: AbortSignal.timeout(8000) // 8 second timeout - increased from 5s
       });
       
       const data = await response.json();
@@ -40,16 +40,17 @@ const TokenBalance = () => {
 
       setBalance(data.balance);
     } catch (err: any) {
-      if (err.name === 'AbortError') {
-        setError('Request timed out. Please check your connection and try again.');
+      console.error('Error fetching balance:', err);
+      
+      if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+        setError('Request timed out. The RPC endpoint may be experiencing issues.');
       } else if (!backendAvailable) {
         setError('Backend service is unavailable. Please ensure the backend server is running.');
-      } else if (err.message.includes('network')) {
-        setError('Network error: Please check your wallet is connected to the Base Sepolia network.');
+      } else if (err.message.includes('network') || err.message.includes('Network')) {
+        setError('Network error: The Base Sepolia network may be experiencing issues.');
       } else {
-        setError(err.message || 'Failed to fetch balance. Please try again.');
+        setError(err.message || 'Failed to fetch balance. Please try again later.');
       }
-      console.error('Error fetching balance:', err);
     } finally {
       setLoading(false);
     }
@@ -57,9 +58,15 @@ const TokenBalance = () => {
 
   // Fetch balance when the component mounts or when the address changes
   useEffect(() => {
+    let mounted = true;
+    
     if (isConnected && address) {
       fetchBalance();
     }
+    
+    return () => {
+      mounted = false;
+    };
   }, [isConnected, address]);
 
   if (!isConnected) {
@@ -76,7 +83,12 @@ const TokenBalance = () => {
           <span className="text-gray-500">Loading...</span>
         </div>
       ) : error ? (
-        <div className="text-red-500 text-sm mb-2">{error}</div>
+        <div className="text-red-500 text-sm mb-2">
+          <p>{error}</p>
+          <p className="mt-1 text-xs text-gray-600">
+            The Base Sepolia testnet or RPC provider may be experiencing issues.
+          </p>
+        </div>
       ) : balance ? (
         <div className="flex items-baseline">
           <span className="text-2xl font-bold">{parseFloat(balance).toFixed(4)}</span>

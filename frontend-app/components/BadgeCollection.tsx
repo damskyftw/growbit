@@ -20,24 +20,58 @@ const BadgeCollection = () => {
   const { address, isConnected } = useAccount();
   const [badges, setBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'achieved' | 'locked'>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | Badge['category']>('all');
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   
+  // Reset badges when wallet changes
+  useEffect(() => {
+    if (isConnected && address) {
+      // Reset badges when the wallet address changes
+      setBadges([]);
+      setLoading(true);
+      setError(null);
+    }
+  }, [address, isConnected]);
+  
   // Fetch badges data
   useEffect(() => {
     const fetchBadges = async () => {
+      if (!isConnected || !address) return;
+      
       setLoading(true);
+      setError(null);
       
       try {
-        // In a real app, this would be fetched from the backend
-        // For now, we'll use mock data
+        // Check if backend is available
+        const healthCheck = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health`, { 
+          signal: AbortSignal.timeout(3000) // 3 second timeout
+        }).catch(() => null);
+        
+        if (!healthCheck || !healthCheck.ok) {
+          setError('Backend service is unavailable. Badges data cannot be loaded.');
+          setLoading(false);
+          return;
+        }
+        
+        // In a real app, this would be fetched from an endpoint like
+        // `${process.env.NEXT_PUBLIC_API_URL}/api/badges/${address}`
         
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 600));
         
-        // Create mock badge data with a reduced set of key achievements
-        const mockBadges: Badge[] = [
+        // Try to fetch from the API first (commented out for now)
+        // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/badges/${address}`);
+        // if (response.ok) {
+        //   const data = await response.json();
+        //   setBadges(data.badges);
+        //   setLoading(false);
+        //   return;
+        // }
+        
+        // If we can't get real data, use empty/starter data for new wallets
+        const defaultBadges: Badge[] = [
           // Beginner Badges
           {
             id: 'first_goal',
@@ -45,8 +79,7 @@ const BadgeCollection = () => {
             description: 'Set your first growth goal',
             icon: '🎯',
             category: 'beginner',
-            achieved: true,
-            achievedAt: '2025-03-10T10:00:00',
+            achieved: false,
             rarity: 'common',
           },
           {
@@ -55,8 +88,7 @@ const BadgeCollection = () => {
             description: 'Stake ETH on a goal for the first time',
             icon: '💰',
             category: 'beginner',
-            achieved: true,
-            achievedAt: '2025-03-11T09:30:00',
+            achieved: false,
             rarity: 'common',
           },
           
@@ -67,8 +99,11 @@ const BadgeCollection = () => {
             description: 'Complete tasks 3 days in a row',
             icon: '🔥',
             category: 'intermediate',
-            achieved: true,
-            achievedAt: '2025-03-12T18:00:00',
+            achieved: false,
+            progress: {
+              current: 0,
+              required: 3,
+            },
             rarity: 'uncommon',
           },
           {
@@ -79,7 +114,7 @@ const BadgeCollection = () => {
             category: 'intermediate',
             achieved: false,
             progress: {
-              current: 3,
+              current: 0,
               required: 10,
             },
             rarity: 'uncommon',
@@ -94,7 +129,7 @@ const BadgeCollection = () => {
             category: 'advanced',
             achieved: false,
             progress: {
-              current: 3,
+              current: 0,
               required: 30,
             },
             rarity: 'rare',
@@ -107,7 +142,7 @@ const BadgeCollection = () => {
             category: 'advanced',
             achieved: false,
             progress: {
-              current: 0.05,
+              current: 0,
               required: 1,
             },
             rarity: 'epic',
@@ -120,8 +155,7 @@ const BadgeCollection = () => {
             description: 'Join GrowBit during its beta phase',
             icon: '🚀',
             category: 'special',
-            achieved: true,
-            achievedAt: '2025-03-09T15:20:00',
+            achieved: false,
             rarity: 'rare',
           },
           
@@ -146,18 +180,19 @@ const BadgeCollection = () => {
           },
         ];
         
-        setBadges(mockBadges);
+        setBadges(defaultBadges);
       } catch (error) {
         console.error('Error fetching badges:', error);
+        setError('Failed to load badge data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
     
-    if (isConnected) {
+    if (isConnected && address) {
       fetchBadges();
     }
-  }, [isConnected]);
+  }, [address, isConnected]);
   
   const filteredBadges = badges.filter(badge => {
     // Filter by achievement status
@@ -297,133 +332,143 @@ const BadgeCollection = () => {
         </div>
       )}
       
-      {/* Badge Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="p-3 bg-blue-50 rounded-md text-center">
-          <div className="text-xl font-bold text-blue-600">{badges.filter(b => b.achieved).length}</div>
-          <div className="text-sm text-gray-500">Achieved</div>
-        </div>
-        <div className="p-3 bg-gray-50 rounded-md text-center">
-          <div className="text-xl font-bold text-gray-600">{badges.filter(b => !b.achieved).length}</div>
-          <div className="text-sm text-gray-500">Locked</div>
-        </div>
-        <div className="p-3 bg-green-50 rounded-md text-center">
-          <div className="text-xl font-bold text-green-600">
-            {badges.length > 0 
-              ? Math.round((badges.filter(b => b.achieved).length / badges.length) * 100) 
-              : 0}%
-          </div>
-          <div className="text-sm text-gray-500">Complete</div>
-        </div>
-      </div>
-      
-      {/* Filters */}
-      <div className="flex flex-wrap justify-between items-center mb-4">
-        <div className="flex space-x-2 mb-2 flex-wrap">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-3 py-1 text-sm font-medium rounded-full ${
-              filter === 'all' 
-                ? 'bg-blue-100 text-blue-600' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            } mb-1 mr-1`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilter('achieved')}
-            className={`px-3 py-1 text-sm font-medium rounded-full ${
-              filter === 'achieved' 
-                ? 'bg-green-100 text-green-600' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            } mb-1 mr-1`}
-          >
-            Achieved
-          </button>
-          <button
-            onClick={() => setFilter('locked')}
-            className={`px-3 py-1 text-sm font-medium rounded-full ${
-              filter === 'locked' 
-                ? 'bg-red-100 text-red-600' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            } mb-1 mr-1`}
-          >
-            Locked
-          </button>
-        </div>
-        
-        <div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value as any)}
-            className="text-sm border rounded-md p-1.5"
-          >
-            <option value="all">All Categories</option>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-            <option value="special">Special</option>
-            <option value="community">Community</option>
-          </select>
-        </div>
-      </div>
-      
-      {loading ? (
-        <div className="py-10 text-center">
-          <p className="text-gray-500">Loading badges...</p>
-        </div>
-      ) : filteredBadges.length === 0 ? (
-        <div className="py-10 text-center">
-          <p className="text-gray-500">No badges match your filters</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {filteredBadges.map((badge) => (
-            <div 
-              key={badge.id}
-              onClick={() => setSelectedBadge(badge)}
-              className={`text-center cursor-pointer p-3 rounded-md border-2 ${
-                badge.achieved 
-                  ? getBadgeRarityColor(badge.rarity)
-                  : 'bg-gray-50 border-gray-200 opacity-70'
-              } hover:shadow-md transition-shadow`}
-            >
-              <div 
-                className={`text-2xl mx-auto mb-2 w-14 h-14 flex items-center justify-center rounded-full ${
-                  badge.achieved ? 'bg-white' : 'bg-gray-100'
-                } overflow-hidden`}
-              >
-                <span className="flex items-center justify-center h-full w-full">{badge.icon}</span>
-              </div>
-              <p className="text-sm font-medium mb-1 line-clamp-1" title={badge.name}>
-                {badge.name}
-              </p>
-              <p className="text-xs text-gray-500 line-clamp-1" title={badge.description}>
-                {badge.description}
-              </p>
-              {!badge.achieved && badge.progress && (
-                <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500 rounded-full"
-                    style={{ width: `${(badge.progress.current / badge.progress.required) * 100}%` }}
-                  ></div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+      {/* Error State */}
+      {error && (
+        <div className="py-6 text-center text-red-500 mb-4">{error}</div>
       )}
       
-      <div className="mt-4 pt-4 border-t text-xs text-gray-500">
-        <p className="mb-1">Badge Rarity Levels:</p>
-        <div className="flex flex-wrap gap-2">
-          <span className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-full text-gray-600">Common</span>
-          <span className="px-2 py-1 bg-green-50 border border-green-200 rounded-full text-green-600">Uncommon</span>
-          <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-full text-blue-600">Rare</span>
-          <span className="px-2 py-1 bg-purple-50 border border-purple-200 rounded-full text-purple-600">Epic</span>
-          <span className="px-2 py-1 bg-yellow-50 border border-yellow-200 rounded-full text-yellow-600">Legendary</span>
+      {/* Loading State */}
+      {loading ? (
+        <div className="py-10 flex justify-center">
+          <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Badge Stats */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="p-3 bg-blue-50 rounded-md text-center">
+              <div className="text-xl font-bold text-blue-600">{badges.filter(b => b.achieved).length}</div>
+              <div className="text-sm text-gray-500">Achieved</div>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-md text-center">
+              <div className="text-xl font-bold text-gray-600">{badges.filter(b => !b.achieved).length}</div>
+              <div className="text-sm text-gray-500">Locked</div>
+            </div>
+            <div className="p-3 bg-green-50 rounded-md text-center">
+              <div className="text-xl font-bold text-green-600">
+                {badges.length > 0 
+                  ? Math.round((badges.filter(b => b.achieved).length / badges.length) * 100) 
+                  : 0}%
+              </div>
+              <div className="text-sm text-gray-500">Complete</div>
+            </div>
+          </div>
+          
+          {/* Filters */}
+          <div className="flex flex-wrap justify-between items-center mb-4">
+            <div className="flex space-x-2 mb-2 flex-wrap">
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-3 py-1 text-sm font-medium rounded-full ${
+                  filter === 'all' 
+                    ? 'bg-blue-100 text-blue-600' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                } mb-1 mr-1`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setFilter('achieved')}
+                className={`px-3 py-1 text-sm font-medium rounded-full ${
+                  filter === 'achieved' 
+                    ? 'bg-green-100 text-green-600' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                } mb-1 mr-1`}
+              >
+                Achieved
+              </button>
+              <button
+                onClick={() => setFilter('locked')}
+                className={`px-3 py-1 text-sm font-medium rounded-full ${
+                  filter === 'locked' 
+                    ? 'bg-red-100 text-red-600' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                } mb-1 mr-1`}
+              >
+                Locked
+              </button>
+            </div>
+            
+            <div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value as any)}
+                className="text-sm border rounded-md p-1.5"
+              >
+                <option value="all">All Categories</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+                <option value="special">Special</option>
+                <option value="community">Community</option>
+              </select>
+            </div>
+          </div>
+          
+          {filteredBadges.length === 0 ? (
+            <div className="py-10 text-center">
+              <p className="text-gray-500">No badges match your filters</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {filteredBadges.map((badge) => (
+                <div 
+                  key={badge.id}
+                  onClick={() => setSelectedBadge(badge)}
+                  className={`text-center cursor-pointer p-3 rounded-md border-2 ${
+                    badge.achieved 
+                      ? getBadgeRarityColor(badge.rarity)
+                      : 'bg-gray-50 border-gray-200 opacity-70'
+                  } hover:shadow-md transition-shadow`}
+                >
+                  <div 
+                    className={`text-2xl mx-auto mb-2 w-14 h-14 flex items-center justify-center rounded-full ${
+                      badge.achieved ? 'bg-white' : 'bg-gray-100'
+                    } overflow-hidden`}
+                  >
+                    <span className="flex items-center justify-center h-full w-full">{badge.icon}</span>
+                  </div>
+                  <p className="text-sm font-medium mb-1 line-clamp-1" title={badge.name}>
+                    {badge.name}
+                  </p>
+                  <p className="text-xs text-gray-500 line-clamp-1" title={badge.description}>
+                    {badge.description}
+                  </p>
+                  {!badge.achieved && badge.progress && (
+                    <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 rounded-full"
+                        style={{ width: `${(badge.progress.current / badge.progress.required) * 100}%` }}
+                      ></div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="mt-4 pt-4 border-t text-xs text-gray-500">
+            <p className="mb-1">Badge Rarity Levels:</p>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-full text-gray-600">Common</span>
+              <span className="px-2 py-1 bg-green-50 border border-green-200 rounded-full text-green-600">Uncommon</span>
+              <span className="px-2 py-1 bg-blue-50 border border-blue-200 rounded-full text-blue-600">Rare</span>
+              <span className="px-2 py-1 bg-purple-50 border border-purple-200 rounded-full text-purple-600">Epic</span>
+              <span className="px-2 py-1 bg-yellow-50 border border-yellow-200 rounded-full text-yellow-600">Legendary</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

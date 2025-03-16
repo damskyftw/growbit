@@ -335,6 +335,25 @@ app.post('/api/goals', async (req, res) => {
       return res.status(400).json({ error: 'Goal description is required' });
     }
     
+    // If staking, verify the user has sufficient balance
+    if (stakeAmount) {
+      try {
+        const balance = await provider.getBalance(userAddress);
+        const balanceEth = ethers.utils.formatEther(balance);
+        const stakeAmountFloat = parseFloat(stakeAmount);
+        
+        if (parseFloat(balanceEth) < stakeAmountFloat) {
+          return res.status(400).json({ 
+            error: `Insufficient balance. Required: ${stakeAmount} ETH, Available: ${balanceEth} ETH`,
+            balance: balanceEth
+          });
+        }
+      } catch (balanceErr) {
+        console.error('Error checking user balance:', balanceErr);
+        return res.status(500).json({ error: 'Failed to check balance. Please try again.' });
+      }
+    }
+    
     // Store in SQLite database
     db.run(
       'INSERT INTO goals (user_address, description) VALUES (?, ?)',
@@ -905,7 +924,7 @@ app.post('/api/blockchain/deploy', async (req, res) => {
 app.delete('/api/goals/:goalId', (req, res) => {
   try {
     const { goalId } = req.params;
-    const { userAddress } = req.body;
+    const { userAddress, adminOverride } = req.body;
     
     if (!goalId) {
       return res.status(400).json({ error: 'Goal ID is required' });
@@ -929,8 +948,8 @@ app.delete('/api/goals/:goalId', (req, res) => {
           return res.status(404).json({ error: 'Goal not found or does not belong to the user' });
         }
         
-        // Check if the goal has ETH staked
-        if (goal.staked_amount && goal.staked_amount !== '0') {
+        // Check if the goal has ETH staked, unless there's an admin override for demo purposes
+        if (!adminOverride && goal.staked_amount && goal.staked_amount !== '0') {
           return res.status(400).json({ 
             error: 'Cannot delete a goal with ETH staked. Complete all tasks to claim your stake.' 
           });
@@ -968,6 +987,138 @@ app.delete('/api/goals/:goalId', (req, res) => {
     );
   } catch (error) {
     console.error('Error deleting goal:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create a simplified demo goal with just one Twitter task
+app.post('/api/demo/twitter-goal', async (req, res) => {
+  try {
+    const { userAddress, stakeAmount } = req.body;
+    
+    if (!ethers.utils.isAddress(userAddress)) {
+      return res.status(400).json({ error: 'Invalid Ethereum address' });
+    }
+    
+    const description = "Post a tweet about your experience with web3 and submit a screenshot as evidence";
+    
+    // If staking, verify the user has sufficient balance
+    if (stakeAmount) {
+      try {
+        const balance = await provider.getBalance(userAddress);
+        const balanceEth = ethers.utils.formatEther(balance);
+        const stakeAmountFloat = parseFloat(stakeAmount);
+        
+        if (parseFloat(balanceEth) < stakeAmountFloat) {
+          return res.status(400).json({ 
+            error: `Insufficient balance. Required: ${stakeAmount} ETH, Available: ${balanceEth} ETH`,
+            balance: balanceEth
+          });
+        }
+      } catch (balanceErr) {
+        console.error('Error checking user balance:', balanceErr);
+        return res.status(500).json({ error: 'Failed to check balance. Please try again.' });
+      }
+    }
+    
+    // Store in SQLite database
+    db.run(
+      'INSERT INTO goals (user_address, description) VALUES (?, ?)',
+      [userAddress, description],
+      async function(err) {
+        if (err) {
+          console.error('Error inserting goal:', err);
+          return res.status(500).json({ error: 'Failed to create goal' });
+        }
+        
+        const goalId = this.lastID;
+        
+        try {
+          // Create a single Twitter task
+          const twitterTask = "Share a tweet about your web3 experience and take a screenshot as proof. Include #web3 and your thoughts on blockchain technology.";
+          
+          // Insert the task into the database
+          db.run(
+            'INSERT INTO tasks (goal_id, description) VALUES (?, ?)',
+            [goalId, twitterTask],
+            function(err) {
+              if (err) {
+                console.error('Error inserting task:', err);
+                return res.status(500).json({ error: 'Failed to create task' });
+              }
+            }
+          );
+          
+          // If stakeAmount is provided, create the goal on blockchain too
+          let blockchainGoalId = null;
+          let blockchainTxHash = null;
+          
+          if (stakeAmount && blockchainService.isReady() && blockchainService.stakeContract) {
+            try {
+              // Create goal on blockchain with just 1 task
+              const result = await blockchainService.createGoal(
+                userAddress, 
+                description, 
+                1, // Just one task
+                0, // No deadline
+                stakeAmount
+              );
+              
+              if (result.success) {
+                blockchainGoalId = result.goalId;
+                blockchainTxHash = result.txHash;
+                
+                // Update the goal in the database with blockchain info
+                db.run(
+                  'UPDATE goals SET blockchain_goal_id = ?, blockchain_tx_hash = ?, staked_amount = ? WHERE id = ?',
+                  [blockchainGoalId, blockchainTxHash, stakeAmount, goalId]
+                );
+              }
+            } catch (blockchainErr) {
+              console.error('Error creating goal on blockchain:', blockchainErr);
+              // Continue even if blockchain creation fails
+            }
+          }
+          
+          // Return the created goal and task
+          db.get(
+            'SELECT * FROM goals WHERE id = ?',
+            [goalId],
+            (err, goal) => {
+              if (err) {
+                console.error('Error retrieving goal:', err);
+                return res.status(500).json({ error: 'Failed to retrieve goal' });
+              }
+              
+              db.all(
+                'SELECT * FROM tasks WHERE goal_id = ?',
+                [goalId],
+                (err, tasks) => {
+                  if (err) {
+                    console.error('Error retrieving tasks:', err);
+                    return res.status(500).json({ error: 'Failed to retrieve tasks' });
+                  }
+                  
+                  res.json({
+                    goal: {
+                      ...goal,
+                      blockchain_goal_id: blockchainGoalId,
+                      blockchain_tx_hash: blockchainTxHash
+                    },
+                    tasks
+                  });
+                }
+              );
+            }
+          );
+        } catch (error) {
+          console.error('Error creating demo goal:', error);
+          res.status(500).json({ error: 'Failed to create demo goal' });
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Error creating demo goal:', error);
     res.status(500).json({ error: error.message });
   }
 });

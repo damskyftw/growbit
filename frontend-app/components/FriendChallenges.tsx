@@ -23,6 +23,7 @@ const FriendChallenges = () => {
   const { address, isConnected } = useAccount();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [friendAddress, setFriendAddress] = useState('');
   const [challengeGoal, setChallengeGoal] = useState('');
   const [showNewChallengeForm, setShowNewChallengeForm] = useState(false);
@@ -31,119 +32,61 @@ const FriendChallenges = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
+  // Reset challenges when wallet changes
+  useEffect(() => {
+    if (isConnected && address) {
+      // Reset challenges when the wallet address changes
+      setChallenges([]);
+      setLoading(true);
+      setError(null);
+      setShowNewChallengeForm(false);
+      setShowSuccessMessage(false);
+      setFriendAddress('');
+      setChallengeGoal('');
+      setErrorMessage(null);
+    }
+  }, [address, isConnected]);
+  
   // Simulate fetching challenge data
   useEffect(() => {
     const fetchChallenges = async () => {
+      if (!isConnected || !address) return;
+      
       setLoading(true);
+      setError(null);
       
       try {
+        // Check if backend is available
+        const healthCheck = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/health`, { 
+          signal: AbortSignal.timeout(3000) // 3 second timeout
+        }).catch(() => null);
+        
+        if (!healthCheck || !healthCheck.ok) {
+          setError('Backend service is unavailable. Challenge data cannot be loaded.');
+          setLoading(false);
+          return;
+        }
+        
         // In a production app, this would be fetched from the backend
         // For now, we'll use mock data
         
         // Simulate API call delay
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        // Create mock data
-        const mockChallenges: Challenge[] = [
-          {
-            id: '1',
-            type: 'active',
-            description: 'Complete 5 coding practice problems this week',
-            friend: {
-              address: '0x7772...9876',
-              displayName: 'CodeNinja',
-              avatar: '👨‍💻',
-            },
-            createdAt: '2025-03-10T10:00:00',
-            expiresAt: '2025-03-17T10:00:00',
-            goalAmount: 5,
-            progress: {
-              user: 3,
-              friend: 4,
-            },
-          },
-          {
-            id: '2',
-            type: 'active',
-            description: 'Read 3 books on personal growth',
-            friend: {
-              address: '0x5544...5431',
-              displayName: 'BookWorm',
-              avatar: '📚',
-            },
-            createdAt: '2025-03-05T14:00:00',
-            expiresAt: '2025-04-05T14:00:00',
-            goalAmount: 3,
-            progress: {
-              user: 1,
-              friend: 2,
-            },
-          },
-          {
-            id: '3',
-            type: 'sent',
-            description: 'Complete 10 gym sessions',
-            friend: {
-              address: '0x3322...8765',
-              displayName: 'FitnessFreak',
-              avatar: '💪',
-            },
-            createdAt: '2025-03-12T09:00:00',
-            expiresAt: '2025-03-26T09:00:00',
-            goalAmount: 10,
-            progress: {
-              user: 0,
-              friend: 0,
-            },
-          },
-          {
-            id: '4',
-            type: 'received',
-            description: 'Meditate for 10 minutes daily for a week',
-            friend: {
-              address: '0x1199...5544',
-              displayName: 'ZenMaster',
-              avatar: '🧘',
-            },
-            createdAt: '2025-03-13T16:00:00',
-            expiresAt: '2025-03-20T16:00:00',
-            goalAmount: 7,
-            progress: {
-              user: 0,
-              friend: 2,
-            },
-          },
-          {
-            id: '5',
-            type: 'received',
-            description: 'Learn 5 new recipes',
-            friend: {
-              address: '0x9900...1122',
-              displayName: 'ChefExtraordinaire',
-              avatar: '👨‍🍳',
-            },
-            createdAt: '2025-03-14T12:00:00',
-            expiresAt: '2025-03-28T12:00:00',
-            goalAmount: 5,
-            progress: {
-              user: 0,
-              friend: 1,
-            },
-          },
-        ];
-        
-        setChallenges(mockChallenges);
+        // For new users, provide empty challenges list
+        setChallenges([]);
       } catch (error) {
         console.error('Error fetching challenges:', error);
+        setError('Failed to load challenge data. Please try again later.');
       } finally {
         setLoading(false);
       }
     };
     
-    if (isConnected) {
+    if (isConnected && address) {
       fetchChallenges();
     }
-  }, [isConnected]);
+  }, [isConnected, address]);
   
   const handleCreateChallenge = (e: React.FormEvent) => {
     e.preventDefault();
@@ -393,9 +336,15 @@ const FriendChallenges = () => {
         </button>
       </div>
       
+      {/* Error State */}
+      {error && (
+        <div className="py-6 text-center text-red-500 mb-4">{error}</div>
+      )}
+      
+      {/* Loading or Empty States */}
       {loading ? (
-        <div className="py-10 text-center">
-          <p className="text-gray-500">Loading challenges...</p>
+        <div className="py-10 flex justify-center">
+          <div className="w-10 h-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
         </div>
       ) : getFilteredChallenges().length === 0 ? (
         <div className="py-6 text-center">

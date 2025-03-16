@@ -13,6 +13,44 @@ const GoalStake = ({
   const [showStake, setShowStake] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEligibleForFaucet, setIsEligibleForFaucet] = useState(false);
+  const [balance, setBalance] = useState<string | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
+  
+  // Fetch the user's balance
+  const fetchBalance = async () => {
+    if (!isConnected || !address) return;
+    
+    setLoadingBalance(true);
+    
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/balance/${address}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch balance');
+      }
+      
+      const data = await response.json();
+      setBalance(data.balance);
+    } catch (err) {
+      console.error('Error fetching balance:', err);
+      // Don't set an error - just keep balance as null
+    } finally {
+      setLoadingBalance(false);
+    }
+  };
+  
+  // Fetch balance and check faucet eligibility when address changes
+  useEffect(() => {
+    if (isConnected && address) {
+      fetchBalance();
+      
+      // Reset stake amount and state when wallet changes
+      setStakeAmount('0.01');
+      setShowStake(false);
+      setError(null);
+      onStakeChange('');
+    }
+  }, [address, isConnected]);
   
   // Check if user is eligible for faucet
   useEffect(() => {
@@ -48,9 +86,20 @@ const GoalStake = ({
     setShowStake(!showStake);
     
     if (!showStake) {
+      // Check balance before allowing stake
+      const parsedBalance = balance ? parseFloat(balance) : 0;
+      const parsedStake = parseFloat(stakeAmount);
+      
+      if (parsedBalance < parsedStake) {
+        setError(`Insufficient balance. You have ${parsedBalance.toFixed(4)} ETH available.`);
+        return;
+      }
+      
       onStakeChange(stakeAmount);
+      setError(null);
     } else {
       onStakeChange('');
+      setError(null);
     }
   };
   
@@ -65,7 +114,16 @@ const GoalStake = ({
     setStakeAmount(value);
     
     if (showStake && value) {
-      onStakeChange(value);
+      // Check balance before allowing stake
+      const parsedBalance = balance ? parseFloat(balance) : 0;
+      const parsedStake = parseFloat(value);
+      
+      if (parsedBalance < parsedStake) {
+        setError(`Insufficient balance. You have ${parsedBalance.toFixed(4)} ETH available.`);
+      } else {
+        setError(null);
+        onStakeChange(value);
+      }
     }
   };
   
@@ -94,6 +152,9 @@ const GoalStake = ({
       
       // Display success message
       alert(`Success! You received ${data.amount} ETH. Transaction hash: ${data.txHash}`);
+      
+      // Refresh balance after receiving ETH
+      setTimeout(fetchBalance, 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to request ETH from faucet');
       console.error('Error requesting ETH from faucet:', err);
@@ -113,7 +174,7 @@ const GoalStake = ({
             id="stakeEth"
             checked={showStake}
             onChange={handleToggleStake}
-            disabled={disabled}
+            disabled={disabled || loadingBalance}
             className="mr-2 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
           />
           <label htmlFor="stakeEth" className="text-sm font-medium text-gray-700">
@@ -121,16 +182,24 @@ const GoalStake = ({
           </label>
         </div>
         
-        {isEligibleForFaucet && (
-          <button
-            type="button"
-            onClick={requestFaucetDrip}
-            disabled={disabled}
-            className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            Get Free ETH
-          </button>
-        )}
+        <div className="flex items-center">
+          {balance !== null && (
+            <span className="text-xs text-gray-500 mr-2">
+              Balance: {parseFloat(balance).toFixed(4)} ETH
+            </span>
+          )}
+          
+          {isEligibleForFaucet && (
+            <button
+              type="button"
+              onClick={requestFaucetDrip}
+              disabled={disabled}
+              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              Get Free ETH
+            </button>
+          )}
+        </div>
       </div>
       
       {error && (

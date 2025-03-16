@@ -20,8 +20,8 @@ const baseSepolia: Chain = {
     symbol: 'ETH',
   },
   rpcUrls: {
-    public: { http: ['https://sepolia.base.org'] },
-    default: { http: ['https://sepolia.base.org'] },
+    public: { http: [process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org'] },
+    default: { http: [process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org'] },
   },
   blockExplorers: {
     default: { name: 'BaseScan', url: 'https://sepolia.basescan.org' },
@@ -29,32 +29,44 @@ const baseSepolia: Chain = {
   testnet: true,
 };
 
-// Configure chains & providers
+// Configure chains & providers with better fallback options
 const { chains, provider, webSocketProvider } = configureChains(
   [baseSepolia],
   [
     jsonRpcProvider({
       rpc: (chain) => {
         if (chain.id === baseSepolia.id) {
-          return { http: 'https://sepolia.base.org' };
+          // Use environment variable or fallback
+          return { http: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org' };
         }
         return null;
       },
+      priority: 0, // Higher priority
     }),
     publicProvider(),
-  ]
+  ],
+  { pollingInterval: 8000 } // Increase polling interval to reduce load
 );
 
-// Create wagmi client
+// Log connection status when client is created
+console.log('Creating wagmi client with chains:', chains);
+
+// Create wagmi client with improved options
 const client = createClient({
   autoConnect: true,
   connectors: [
-    new MetaMaskConnector({ chains }),
+    new MetaMaskConnector({ 
+      chains,
+      options: {
+        shimDisconnect: true,
+      }
+    }),
     new CoinbaseWalletConnector({
       chains,
       options: {
         appName: 'GrowBit',
-        // Smart wallet features are auto-enabled when using Coinbase Wallet on Base
+        headlessMode: false,
+        reloadOnDisconnect: false,
       },
     }),
     // Additional connector for any injected wallet like Rabby
@@ -68,6 +80,9 @@ const client = createClient({
   ],
   provider,
   webSocketProvider,
+  logger: {
+    warn: (message) => console.warn('Wagmi warning:', message),
+  },
 });
 
 function MyApp({ Component, pageProps }: AppProps) {
@@ -81,7 +96,7 @@ function MyApp({ Component, pageProps }: AppProps) {
     // Simulate app initialization loading
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 600);
+    }, 800); // Increased from 600ms to give more time for client setup
     
     return () => clearTimeout(timer);
   }, []);

@@ -27,8 +27,23 @@ const GoalSettingForm = () => {
   const [stakeAmount, setStakeAmount] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [balanceError, setBalanceError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [createdGoal, setCreatedGoal] = useState<Goal | null>(null);
+  const [isDemoSubmitting, setIsDemoSubmitting] = useState(false);
+
+  // Reset form when wallet changes
+  useEffect(() => {
+    if (address) {
+      // Reset form state when wallet changes
+      setGoalDescription('');
+      setStakeAmount('');
+      setError(null);
+      setBalanceError(null);
+      setSuccessMessage(null);
+      setCreatedGoal(null);
+    }
+  }, [address]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +60,7 @@ const GoalSettingForm = () => {
 
     setIsSubmitting(true);
     setError(null);
+    setBalanceError(null);
     setSuccessMessage(null);
     setCreatedGoal(null);
 
@@ -70,7 +86,13 @@ const GoalSettingForm = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to create goal');
+        // Check if it's a balance error
+        if (data.error && data.error.includes('Insufficient balance')) {
+          setBalanceError(data.error);
+        } else {
+          throw new Error(data.error || 'Failed to create goal');
+        }
+        return;
       }
 
       // Ensure the response data has the expected structure
@@ -102,6 +124,78 @@ const GoalSettingForm = () => {
   
   const handleStakeChange = (amount: string) => {
     setStakeAmount(amount);
+    // Clear balance error when stake amount changes
+    setBalanceError(null);
+  };
+
+  // Create a simplified demo Twitter goal with just one task
+  const createDemoTwitterGoal = async () => {
+    if (!isConnected || !address) {
+      setError('Please connect your wallet first');
+      return;
+    }
+
+    setIsDemoSubmitting(true);
+    setError(null);
+    setBalanceError(null);
+    setSuccessMessage(null);
+    setCreatedGoal(null);
+
+    try {
+      const requestBody: any = {
+        userAddress: address
+      };
+      
+      // Add stake amount if provided
+      if (stakeAmount) {
+        requestBody.stakeAmount = stakeAmount;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/demo/twitter-goal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Check if it's a balance error
+        if (data.error && data.error.includes('Insufficient balance')) {
+          setBalanceError(data.error);
+        } else {
+          throw new Error(data.error || 'Failed to create demo goal');
+        }
+        return;
+      }
+
+      // Process the response
+      const goalData = data.goal || data;
+      
+      // Default to empty array if tasks is undefined
+      if (!goalData.tasks) {
+        goalData.tasks = [];
+      }
+
+      let successText = 'Demo Twitter goal created! Share a tweet and take a screenshot as evidence:';
+      
+      // Add blockchain info to success message if goal was staked
+      if (stakeAmount && goalData.blockchain_goal_id) {
+        successText = `Demo Twitter goal created with ${stakeAmount} ETH staked! Complete the task to earn it back.`;
+      }
+
+      setSuccessMessage(successText);
+      setCreatedGoal(goalData);
+      setGoalDescription('');
+      setStakeAmount('');
+    } catch (err: any) {
+      setError(err.message || 'Failed to create demo goal. Please try again.');
+      console.error('Error creating demo goal:', err);
+    } finally {
+      setIsDemoSubmitting(false);
+    }
   };
 
   return (
@@ -115,6 +209,11 @@ const GoalSettingForm = () => {
       ) : error ? (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
           <p className="text-red-700">{error}</p>
+        </div>
+      ) : balanceError ? (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+          <p className="text-red-700">{balanceError}</p>
+          <p className="text-sm text-red-600 mt-1">Please reduce your stake amount or add more ETH to your wallet.</p>
         </div>
       ) : successMessage ? (
         <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
@@ -148,6 +247,22 @@ const GoalSettingForm = () => {
           )}
         </div>
       ) : null}
+
+      {/* Quick Demo Button */}
+      <div className="mb-5 pb-5 border-b border-gray-200">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Quick Demo</h3>
+        <button
+          type="button"
+          onClick={createDemoTwitterGoal}
+          disabled={isDemoSubmitting || isSubmitting}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+        >
+          {isDemoSubmitting ? 'Creating...' : 'Create Twitter Task Demo'}
+        </button>
+        <p className="text-xs text-gray-500 mt-2">
+          Creates a simple goal with one task: Post a tweet about web3. Perfect for quick demos!
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
